@@ -1,28 +1,38 @@
 import '../../data/models/product_model.dart';
 
-abstract class ProductEvent {}
+sealed class ProductEvent {}
 
-class LoadProductsEvent extends ProductEvent {}
+final class LoadProductsEvent extends ProductEvent {}
 
-class ToggleFavouriteEvent extends ProductEvent {
+final class ToggleFavouriteEvent extends ProductEvent {
   final Product product;
   ToggleFavouriteEvent(this.product);
 }
 
-class AddToCartEvent extends ProductEvent {
+final class AddToCartEvent extends ProductEvent {
   final Product product;
   AddToCartEvent(this.product);
 }
 
-class RemoveFromCartEvent extends ProductEvent {
+final class IncrementCartQuantityEvent extends ProductEvent {
+  final Product product;
+  IncrementCartQuantityEvent(this.product);
+}
+
+final class DecrementCartQuantityEvent extends ProductEvent {
+  final Product product;
+  DecrementCartQuantityEvent(this.product);
+}
+
+final class RemoveFromCartEvent extends ProductEvent {
   final Product product;
   RemoveFromCartEvent(this.product);
 }
 
-class FilterProductsEvent extends ProductEvent {
+final class FilterProductsEvent extends ProductEvent {
   final String query;
   final double maxPrice;
   FilterProductsEvent({required this.query, required this.maxPrice});
 }
 
-class CheckoutCartEvent extends ProductEvent {}
+final class CheckoutCartEvent extends ProductEvent {}

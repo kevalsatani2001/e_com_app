@@ -1,58 +1,91 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/product_model.dart';
 
 class ProductRepository {
-  final String _apiUrl = "https://fakestoreapi.com/products";
-  static const String _favKey = "favourite_products";
-  static const String _cartKey = "cart_products";
+  static const _productsUrl = 'https://fakestoreapi.com/products';
+  static const _favouritesKey = 'favourite_products';
+  static const _cartKey = 'cart_products';
 
-  // Fetch Products from API
   Future<List<Product>> fetchProducts() async {
-    try {
-      final response = await http.get(Uri.parse(_apiUrl));
-      if (response.statusCode == 200) {
-        List<dynamic> data = json.decode(response.body);
-        return data.map((json) => Product.fromJson(json)).toList();
-      } else {
-        throw Exception("Failed to load products");
-      }
-    } catch (e) {
-      throw Exception("Error fetching data: $e");
+    final response = await http.get(Uri.parse(_productsUrl));
+
+    if (response.statusCode != 200) {
+      throw ProductRepositoryException('Could not load catalog');
     }
+
+    final data = json.decode(response.body) as List<dynamic>;
+    return data
+        .map((item) => Product.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
-  // Local Persistence: Favourites
   Future<void> saveFavourites(List<Product> products) async {
     final prefs = await SharedPreferences.getInstance();
-    List<String> encoded = products.map((p) => json.encode(p.toJson())).toList();
-    await prefs.setStringList(_favKey, encoded);
+    final encoded =
+        products.map((p) => json.encode(p.toJson())).toList(growable: false);
+    await prefs.setStringList(_favouritesKey, encoded);
   }
 
   Future<List<Product>> loadFavourites() async {
     final prefs = await SharedPreferences.getInstance();
-    List<String>? encoded = prefs.getStringList(_favKey);
-    if (encoded == null) return [];
-    return encoded.map((p) => Product.fromJson(json.decode(p))).toList();
+    final encoded = prefs.getStringList(_favouritesKey);
+    if (encoded == null || encoded.isEmpty) return [];
+    return encoded
+        .map((entry) => Product.fromJson(json.decode(entry) as Map<String, dynamic>))
+        .toList();
   }
 
-  // Local Persistence: Cart
-  Future<void> saveCart(List<Product> products) async {
+  Future<void> saveCart(List<CartItem> items) async {
     final prefs = await SharedPreferences.getInstance();
-    List<String> encoded = products.map((p) => json.encode(p.toJson())).toList();
+    final encoded =
+        items.map((item) => json.encode(item.toJson())).toList(growable: false);
     await prefs.setStringList(_cartKey, encoded);
   }
 
-  Future<List<Product>> loadCart() async {
+  Future<List<CartItem>> loadCart() async {
     final prefs = await SharedPreferences.getInstance();
-    List<String>? encoded = prefs.getStringList(_cartKey);
-    if (encoded == null) return [];
-    return encoded.map((p) => Product.fromJson(json.decode(p))).toList();
+    final encoded = prefs.getStringList(_cartKey);
+    if (encoded == null || encoded.isEmpty) return [];
+
+    final merged = <int, CartItem>{};
+
+    for (final entry in encoded) {
+      final map = json.decode(entry) as Map<String, dynamic>;
+      final CartItem item;
+
+      if (map.containsKey('product')) {
+        item = CartItem.fromJson(map);
+      } else {
+        item = CartItem(product: Product.fromJson(map), quantity: 1);
+      }
+
+      final existing = merged[item.product.id];
+      if (existing == null) {
+        merged[item.product.id] = item;
+      } else {
+        merged[item.product.id] = existing.copyWith(
+          quantity: existing.quantity + item.quantity,
+        );
+      }
+    }
+
+    return merged.values.toList();
   }
 
   Future<void> clearCart() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_cartKey);
   }
+}
+
+class ProductRepositoryException implements Exception {
+  final String message;
+  const ProductRepositoryException(this.message);
+
+  @override
+  String toString() => message;
 }
