@@ -1,6 +1,8 @@
 # e_com_app — Flutter E-Commerce Store
 
-Production-ready Flutter e-commerce client powered by **BLoC**, **SharedPreferences**, and the [Fake Store API](https://fakestoreapi.com). Browse products, search with live filters, manage favourites, and control cart quantities with offline persistence across app restarts.
+Production-ready Flutter e-commerce client powered by **BLoC**, **SharedPreferences**, and
+the [Fake Store API](https://fakestoreapi.com). Browse products, search with live filters, manage
+favourites, and control cart quantities with offline persistence across app restarts.
 
 ---
 
@@ -21,27 +23,27 @@ Production-ready Flutter e-commerce client powered by **BLoC**, **SharedPreferen
 
 ## Features
 
-| Area | Capability |
-|------|------------|
-| **Catalog** | Fetches products from `https://fakestoreapi.com/products` |
-| **Home** | 2-column grid, favourite toggle, context-aware cart controls on each card |
-| **Search** | Real-time title filter + price slider (both applied together) |
-| **Cart** | Add, increment, decrement, remove; quantity × price line totals |
-| **Favourites** | Save/remove products; persisted locally |
-| **Product detail** | Category chip, rating badge, description, Hero image, bottom cart action |
-| **Checkout** | Clears in-memory cart state and removes cart key from SharedPreferences |
-| **Cold start** | Rehydrates cart (with quantities) and favourites from disk |
+| Area               | Capability                                                                |
+|--------------------|---------------------------------------------------------------------------|
+| **Catalog**        | Fetches products from `https://fakestoreapi.com/products`                 |
+| **Home**           | 2-column grid, favourite toggle, context-aware cart controls on each card |
+| **Search**         | Real-time title filter + price slider (both applied together)             |
+| **Cart**           | Add, increment, decrement, remove; quantity × price line totals           |
+| **Favourites**     | Save/remove products; persisted locally                                   |
+| **Product detail** | Category chip, rating badge, description, Hero image, bottom cart action  |
+| **Checkout**       | Clears in-memory cart state and removes cart key from SharedPreferences   |
+| **Cold start**     | Rehydrates cart (with quantities) and favourites from disk                |
 
 ---
 
 ## Tech Stack
 
-| Package | Purpose |
-|---------|---------|
-| `flutter_bloc` | State management (events → bloc → UI) |
-| `http` | REST API calls |
+| Package              | Purpose                                 |
+|----------------------|-----------------------------------------|
+| `flutter_bloc`       | State management (events → bloc → UI)   |
+| `http`               | REST API calls                          |
 | `shared_preferences` | Local persistence for cart & favourites |
-| Material 3 | Theming via `ColorScheme.fromSeed` |
+| Material 3           | Theming via `ColorScheme.fromSeed`      |
 
 **SDK:** Dart `^3.11.5`
 
@@ -125,16 +127,16 @@ Clean layered structure:
 
 ### Events
 
-| Event | Effect |
-|-------|--------|
-| `LoadProductsEvent` | Fetch catalog + rehydrate favourites & cart |
-| `ToggleFavouriteEvent` | Add/remove favourite + save prefs |
-| `AddToCartEvent` | Add line at quantity 1 (no-op if already in cart) |
-| `IncrementCartQuantityEvent` | `quantity + 1` |
-| `DecrementCartQuantityEvent` | `quantity - 1`; remove line at 0 |
-| `RemoveFromCartEvent` | Remove entire line |
-| `FilterProductsEvent` | Apply `query` + `maxPrice` to `allProducts` |
-| `CheckoutCartEvent` | `clearCart()` in prefs + empty `cartItems` |
+| Event                        | Effect                                            |
+|------------------------------|---------------------------------------------------|
+| `LoadProductsEvent`          | Fetch catalog + rehydrate favourites & cart       |
+| `ToggleFavouriteEvent`       | Add/remove favourite + save prefs                 |
+| `AddToCartEvent`             | Add line at quantity 1 (no-op if already in cart) |
+| `IncrementCartQuantityEvent` | `quantity + 1`                                    |
+| `DecrementCartQuantityEvent` | `quantity - 1`; remove line at 0                  |
+| `RemoveFromCartEvent`        | Remove entire line                                |
+| `FilterProductsEvent`        | Apply `query` + `maxPrice` to `allProducts`       |
+| `CheckoutCartEvent`          | `clearCart()` in prefs + empty `cartItems`        |
 
 Every cart/favourite mutation writes to SharedPreferences **before** emitting new state.
 
@@ -158,13 +160,14 @@ Every cart/favourite mutation writes to SharedPreferences **before** emitting ne
 - Bordered card, network image with **Hero** tag `product-image-{id}`.
 - Heart icon synced with `state.isFavourite(id)`.
 - **Cart-aware footer:**
-  - Not in cart → full-width **Add to Cart**
-  - In cart → compact **− / count / +** (`CartQuantitySelector`)
+    - Not in cart → full-width **Add to Cart**
+    - In cart → compact **− / count / +** (`CartQuantitySelector`)
 - Tap image/title → `ProductDetailScreen` with fade transition.
 
 ### Search
 
-- `TextField.onChanged` and `Slider.onChanged` both dispatch `FilterProductsEvent` with the **current** value of the other control.
+- `TextField.onChanged` and `Slider.onChanged` both dispatch `FilterProductsEvent` with the *
+  *current** value of the other control.
 - Filter: `title.contains(query)` AND `price <= maxPrice`.
 
 ### Product detail
@@ -181,12 +184,13 @@ Every cart/favourite mutation writes to SharedPreferences **before** emitting ne
 
 ## Persistence
 
-| Key | Content |
-|-----|---------|
-| `favourite_products` | `StringList` of JSON-encoded `Product` |
-| `cart_products` | `StringList` of JSON-encoded `CartItem` |
+| Key                  | Content                                 |
+|----------------------|-----------------------------------------|
+| `favourite_products` | `StringList` of JSON-encoded `Product`  |
+| `cart_products`      | `StringList` of JSON-encoded `CartItem` |
 
-**Safe parsing:** `price` and `rating.rate` use `num → double` casting to avoid runtime parse crashes.
+**Safe parsing:** `price` and `rating.rate` use `num → double` casting to avoid runtime parse
+crashes.
 
 ---
 
@@ -230,35 +234,36 @@ flutter build apk --release
 1. **Clear separation of concerns** — data, logic, and UI live in dedicated folders.
 2. **Predictable state** — one bloc, immutable `ProductState`, explicit events.
 3. **Offline cart & favourites** — survives process death and cold starts.
-4. **Quantity-aware cart** — single source of truth; UI stays in sync via `BlocBuilder` + `buildWhen` where needed.
+4. **Quantity-aware cart** — single source of truth; UI stays in sync
+   via `BlocBuilder` + `buildWhen` where needed.
 5. **Polished UX** — context-aware controls on grid and detail reduce navigation friction.
 6. **Defensive JSON** — handles `int`/`double` from API for numeric fields.
 7. **Backward-compatible storage** — old cart format migrates without user action.
 
 ### Trade-offs & possible extensions
 
-| Topic | Current choice | Future idea |
-|-------|----------------|-------------|
-| State scope | One global `ProductBloc` | Split cart/catalog blocs if app grows |
-| API errors | Generic user message | Typed failures, retry with backoff |
-| Cart duplicates | One line per product ID | Variants/SKUs would need model change |
-| Images | `Image.network` only | `cached_network_image`, placeholders |
-| Auth / orders | Not implemented | Fake Store has no real checkout API |
-| Tests | Smoke widget test | Bloc unit tests + repository mocks |
+| Topic           | Current choice           | Future idea                           |
+|-----------------|--------------------------|---------------------------------------|
+| State scope     | One global `ProductBloc` | Split cart/catalog blocs if app grows |
+| API errors      | Generic user message     | Typed failures, retry with backoff    |
+| Cart duplicates | One line per product ID  | Variants/SKUs would need model change |
+| Images          | `Image.network` only     | `cached_network_image`, placeholders  |
+| Auth / orders   | Not implemented          | Fake Store has no real checkout API   |
+| Tests           | Smoke widget test        | Bloc unit tests + repository mocks    |
 
 ### File responsibility map
 
-| File | Responsibility |
-|------|----------------|
-| `product_model.dart` | Domain models + JSON serialization |
-| `product_repository.dart` | API + prefs read/write/clear |
-| `product_bloc.dart` | All business rules and persistence triggers |
-| `product_event.dart` / `product_state.dart` | Bloc contract |
-| `product_card.dart` | Grid tile + cart/favourite interactions |
-| `cart_quantity_selector.dart` | Reusable −/count/+ control (compact & regular) |
-| `product_detail_screen.dart` | Full product view + bottom action |
-| `main_navigation_screen.dart` | Tab shell + initial load event |
-| `app_theme.dart` | Global Material 3 styling |
+| File                                        | Responsibility                                 |
+|---------------------------------------------|------------------------------------------------|
+| `product_model.dart`                        | Domain models + JSON serialization             |
+| `product_repository.dart`                   | API + prefs read/write/clear                   |
+| `product_bloc.dart`                         | All business rules and persistence triggers    |
+| `product_event.dart` / `product_state.dart` | Bloc contract                                  |
+| `product_card.dart`                         | Grid tile + cart/favourite interactions        |
+| `cart_quantity_selector.dart`               | Reusable −/count/+ control (compact & regular) |
+| `product_detail_screen.dart`                | Full product view + bottom action              |
+| `main_navigation_screen.dart`               | Tab shell + initial load event                 |
+| `app_theme.dart`                            | Global Material 3 styling                      |
 
 ### Quality checklist
 
@@ -277,7 +282,8 @@ flutter build apk --release
 
 ## AI Reproduction Prompt
 
-Copy everything inside the block below and paste it into Cursor, ChatGPT, Claude, or any coding AI to regenerate this application from scratch.
+Copy everything inside the block below and paste it into Cursor, ChatGPT, Claude, or any coding AI
+to regenerate this application from scratch.
 
 ````
 Act as a Staff Flutter Developer. Build a production-ready, highly polished, modular E-commerce Flutter app using the BLoC pattern and SharedPreferences.
@@ -439,4 +445,5 @@ Run `flutter analyze` with zero issues. Add a minimal widget_test that pumps Sto
 
 ## License
 
-This project is for learning and portfolio use. Product data © [Fake Store API](https://fakestoreapi.com).
+This project is for learning and portfolio use. Product data
+© [Fake Store API](https://fakestoreapi.com).
