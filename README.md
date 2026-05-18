@@ -15,6 +15,7 @@ favourites, and control cart quantities with offline persistence across app rest
 - [Data Flow](#data-flow)
 - [Screens & UX](#screens--ux)
 - [Persistence](#persistence)
+- [API Contract & Response Changes](#api-contract--response-changes)
 - [Getting Started](#getting-started)
 - [App Analysis](#app-analysis)
 - [AI Reproduction Prompt](#ai-reproduction-prompt)
@@ -191,6 +192,77 @@ Every cart/favourite mutation writes to SharedPreferences **before** emitting ne
 
 **Safe parsing:** `price` and `rating.rate` use `num → double` casting to avoid runtime parse
 crashes.
+
+> Local cart/favourites JSON is **your app’s format**, not the API’s. It only breaks if you change
+> `Product.toJson()` / `fromJson()` without a migration.
+
+---
+
+## API Contract & Response Changes
+
+### What the app expects today (Fake Store API)
+
+**Request:** `GET https://fakestoreapi.com/products`
+
+**Response:** HTTP `200` with a **JSON array** at the root (not wrapped in `{ "data": [...] }`).
+
+```json
+[
+  {
+    "id": 1,
+    "title": "…",
+    "price": 109.95,
+    "description": "…",
+    "category": "…",
+    "image": "https://…",
+    "rating": { "rate": 3.9, "count": 120 }
+  }
+]
+```
+
+Parsing lives in `product_model.dart` (`Product.fromJson`, `Rating.fromJson`) and
+`product_repository.dart` (`fetchProducts`).
+
+### If the API or response structure changes
+
+| Change | What happens now | What you should do |
+|--------|------------------|-------------------|
+| **URL / method changes** | Request fails or 404 → `ProductRepositoryException` → Home shows error + Retry | Update `_productsUrl` in `product_repository.dart` |
+| **Non-200 status** | Same error path (generic message) | Map status codes to clearer messages in repository |
+| **Root is object instead of array** e.g. `{ "products": [...] }` | `as List<dynamic>` **throws** → Bloc shows *"Something went wrong…"* | Parse wrapper: `json['products'] as List` |
+| **Field renamed** e.g. `name` instead of `title` | `as String` on missing key → **crash at parse** | Update `fromJson` keys (or add fallbacks: `json['title'] ?? json['name']`) |
+| **Field removed** e.g. no `rating` | `Rating.fromJson` throws | Default rating or make `rating` nullable in model + UI |
+| **Type change** e.g. `id` as String | `as int` throws | Use safe parser: `int.tryParse(json['id'].toString())` |
+| **`price` / `rate` as String** | Partially OK (`_toDouble` parses string); `as int` elsewhere may still fail | Extend safe helpers for all numeric fields |
+| **Extra fields** | Ignored (no problem) | Nothing required |
+| **Empty array `[]`** | App loads with empty catalog | OK by design |
+| **Invalid JSON** | `json.decode` throws → generic failure | Catch `FormatException`, show “Invalid server response” |
+
+### What does **not** break when only the API changes
+
+- **Cart** and **favourites** on disk — stored with `toJson()` from your models, not raw API bodies.
+- **BLoC / UI** — unchanged as long as `Product` and `CartItem` stay the same shape internally.
+
+### Where to edit (checklist)
+
+1. `lib/data/repositories/product_repository.dart` — URL, status handling, unwrap response envelope.
+2. `lib/data/models/product_model.dart` — field names, types, defaults, nullable fields.
+3. Run `flutter analyze` and test with a real response (or mock JSON file).
+
+### Hardening options (recommended for production)
+
+- **DTO layer:** `ProductDto.fromJson(apiMap)` → `toDomain()` so API shape ≠ app model.
+- **`json_serializable` + `@JsonKey`:** code-gen when schema is stable but versioned.
+- **Versioned prefs:** `cart_products_v2` if local `Product` JSON changes.
+- **Contract tests:** commit a sample `fixtures/products.json` and unit-test `fromJson`.
+
+### User-visible behaviour today
+
+```
+API OK + valid JSON  →  Home grid loads
+API error / bad JSON →  ProductStatus.failure + Retry on Home
+Cart / Favourites    →  Still load from SharedPreferences (independent of API)
+```
 
 ---
 
